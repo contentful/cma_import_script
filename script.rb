@@ -86,6 +86,6 @@ breweries_by_id.map { |_k, v| v.publish }
 beers_entries = {}
 brewery_ids = breweries_by_id.keys
 CSV.foreach('data/beers.csv', headers: true) do |row|
-  beers_entries[row[0]] = beer_type.entries.create(beer_name: row[2], beer_description: row[10], beer_abv: row[5], beer_brewery_id: brewery, beer_cat_id: category_entries[row[3]], beer_style_id: style_entries[row[4]]) if brewery_ids.include? row[1]
+  beers_entries[row[0]] = beer_type.entries.create(beer_name: row[2], beer_description: row[10], beer_abv: row[5], beer_brewery_id: breweries_by_id[row[1]], beer_cat_id: category_entries[row[3]], beer_style_id: style_entries[row[4]]) if brewery_ids.include? row[1]
 end
 beers_entries.map { |_k, v| v.publish }
