@@ -2,7 +2,7 @@ require 'contentful/management'
 require 'csv'
 
 access_token = 'd508948e2545cde4caa461fa4ba9a26b43ce560bbda265a605b0ce0a5c9a5839'
-organization_id = '1EQPR5IHrPx94UY4AViTYO'
+organization_id = '3CxfkkabuKH7LHYbGVFJ8r'
 
 Contentful::Management::Client.new(access_token)
 
@@ -11,35 +11,36 @@ space = Contentful::Management::Space.create(name: 'Breweries and Beers', organi
 
 # create Brewery ContentType
 brewery_type = space.content_types.create(name: 'Brewery', description: 'Brewery description')
-brewery_type.fields.create(id: 'brewery_name', name: 'Brewery Name', type: 'Text', localized: true, required: true)
-brewery_type.fields.create(id: 'brewery_description', name: 'Brewery Description', type: 'Text', localized: true)
-brewery_type.fields.create(id: 'brewery_phone', name: 'Brewery Phone', type: 'Text', localized: true)
-brewery_type.fields.create(id: 'brewery_city', name: 'Brewery City', type: 'Text', localized: false)
-brewery_type.fields.create(id: 'brewery_code', name: 'Brewery Code', type: 'Symbol', localized: false)
-brewery_type.fields.create(id: 'brewery_website', name: 'Brewery Website', type: 'Text', localized: false)
+brewery_type.fields.create(id: 'name', name: 'Name', type: 'Text', localized: true, required: true)
+brewery_type.fields.create(id: 'description', name: 'Description', type: 'Text', localized: true)
+brewery_type.fields.create(id: 'phone', name: 'Phone', type: 'Text', localized: true)
+brewery_type.fields.create(id: 'city', name: 'City', type: 'Text', localized: false)
+brewery_type.fields.create(id: 'code', name: 'Code', type: 'Symbol', localized: false)
+brewery_type.fields.create(id: 'website', name: 'Website', type: 'Text', localized: false)
+brewery_type.fields.create(id: 'location', name: 'Location', type: 'Location', localized: false)
 
 brewery_beers = Contentful::Management::Field.new
 brewery_beers.type = 'Link'
 brewery_beers.link_type = 'Entry'
-brewery_type.fields.create(id: 'brewery_beers', name: 'Brewery Beer', type: 'Array', localized: true, items: brewery_beers)
+brewery_type.fields.create(id: 'beers', name: 'Beers', type: 'Array', localized: true, items: brewery_beers)
 
 # create Beer ContentType
 beer_type = space.content_types.create(name: 'Beer')
-beer_type.fields.create(id: 'beer_name', name: 'Beer Name', type: 'Text', localized: true)
-beer_type.fields.create(id: 'beer_description', name: 'Beer Description', type: 'Text', localized: true)
-beer_type.fields.create(id: 'beer_abv', name: 'Alcohol by Volume', type: 'Text', localized: true)
-beer_type.fields.create(id: 'beer_brewery_id', name: 'Beer Brewery', type: 'Link', link_type: 'Entry', localized: false, required: true)
-beer_type.fields.create(id: 'beer_cat_id', name: 'Beer Category', type: 'Link', link_type: 'Entry', localized: true)
-beer_type.fields.create(id: 'beer_style_id', name: 'Beer Style', type: 'Link', link_type: 'Entry', localized: true)
+beer_type.fields.create(id: 'name', name: 'Name', type: 'Text', localized: true)
+beer_type.fields.create(id: 'description', name: 'Description', type: 'Text', localized: true)
+beer_type.fields.create(id: 'abv', name: 'Alcohol by Volume', type: 'Number', localized: true)
+beer_type.fields.create(id: 'brewery_id', name: 'Brewery', type: 'Link', link_type: 'Entry', localized: false, required: true)
+beer_type.fields.create(id: 'category_id', name: 'Category', type: 'Link', link_type: 'Entry', localized: true)
+beer_type.fields.create(id: 'style_id', name: 'Style', type: 'Link', link_type: 'Entry', localized: true)
 
 # create Category ContentType
 category_type = space.content_types.create(name: 'Category')
-category_type.fields.create(id: 'category_name', name: 'Category Name', type: 'Text', localized: true)
+category_type.fields.create(id: 'name', name: 'Category Name', type: 'Text', localized: true)
 
 # create Style ContentType
 style_type = space.content_types.create(name: 'Style')
-style_type.fields.create(id: 'style_name', name: 'Style Name', type: 'Text', localized: true)
-style_type.fields.create(id: 'style_category_id', name: 'Style category ', type: 'Link', link_type: 'Entry', localized: true)
+style_type.fields.create(id: 'name', name: 'Name', type: 'Text', localized: true)
+style_type.fields.create(id: 'category_id', name: 'Category', type: 'Link', link_type: 'Entry', localized: true)
 
 sleep 2
 
@@ -54,7 +55,7 @@ sleep 2
 #create an entries for Category ContentType
 category_entries = {}
 CSV.foreach('data/categories.csv', headers: true) do |row|
-  category_entries[row[0]] = category_type.entries.create({id: "category_#{row[0]}", category_name: row[1]})
+  category_entries[row[0]] = category_type.entries.create({id: "category_#{row['id']}", name: row['cat_name']})
 end
 
 #publish all Category entries
@@ -63,29 +64,52 @@ category_entries.map { |_k, v| v.publish }
 sleep 2
 
 style_entries = {}
-category_ids = category_entries.map(&:id)
+style_ids = %w(1 2 3 4 5 6 11 22 24 25 27 49 90 110 112)
 CSV.foreach('data/styles.csv', headers: true) do |row|
-  style_entries[row[0]] = style_type.entries.create(id: "style_#{row[0]}", style_category_id: category_entry, style_name: row[2]) if category_ids.include? "category_#{row[0]}" #limit styles to 11.
+  style_entries[row['id']] = style_type.entries.create(id: "style_#{row['id']}", category_id: category_entries[row['cat_id']], name: row['style_name']) if style_ids.include? row['id']
 end
 
 #publish all Style entries
 style_entries.map { |_k, v| v.publish }
 
 breweries_ids = %w(1 10 62 103 500 901 1302 1009 1101 1260)
-breweries_by_id = {}
+breweries_entries = {}
 
 CSV.foreach('data/breweries.csv', headers: true) do |row|
-  brewery = brewery_type.entries.create(id: "brewery_#{row[0]}", brewery_name: row[1], brewery_description: row[11], brewery_phone: row[8], brewery_city: row[4], brewery_code: row[6], brewery_website: row[9]) if breweries_ids.include? row[0]
-  breweries_by_id[row[0]] = brewery unless brewery.nil?
+  brewery = brewery_type.entries.create(id: "brewery_#{row['id']}", name: row['name'], description: row['descript'], phone: row['phone'], city: row['city'], code: row['code'], website: row['website']) if breweries_ids.include? row['id']
+  breweries_entries[row['id']] = brewery unless brewery.nil?
 end
-sleep 2
-breweries_by_id.map { |_k, v| v.publish }
 
-#TODO add geolocation from csv to breweries
+sleep 2
+breweries_entries.map { |_k, v| v.publish }
 
 beers_entries = {}
-brewery_ids = breweries_by_id.keys
+brewery_ids = breweries_entries.keys
 CSV.foreach('data/beers.csv', headers: true) do |row|
-  beers_entries[row[0]] = beer_type.entries.create(beer_name: row[2], beer_description: row[10], beer_abv: row[5], beer_brewery_id: breweries_by_id[row[1]], beer_cat_id: category_entries[row[3]], beer_style_id: style_entries[row[4]]) if brewery_ids.include? row[1]
+  beers_entries[row['id']] = beer_type.entries.create(name: row['name'], description: row['descript'], abv: row['abv'].to_i, brewery_id: breweries_entries[row['brewery_id']], category_id: category_entries[row['cat_id']], style_id: style_entries[row['style_id']]) if brewery_ids.include? row['brewery_id']
 end
 beers_entries.map { |_k, v| v.publish }
+
+sleep 3
+
+# update Breweries ContentTypes (add geolocation attribute)
+CSV.foreach('data/breweries_geocode.csv', headers: true) do |row|
+  brewery = breweries_entries[row['brewery_id']]
+  unless brewery.nil?
+    location = Contentful::Management::Location.new
+    location.lat = row['latitude'].to_f
+    location.lon = row['longitude'].to_f
+    brewery.update(location: location)
+  end
+end
+
+#update Breweries ContentTypes (add beers_entries)
+breweries_entries.each do |key, brewery_entry|
+  brewery_beers = []
+  beers_entries.map do |_k, beer|
+   brewery_beers << beer if beer.fields[:brewery_id]['sys']['id'] == "brewery_#{key}"
+  end
+  brewery_entry.update(beers: brewery_beers)
+end
+
+
