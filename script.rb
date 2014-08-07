@@ -1,18 +1,13 @@
 require 'contentful/management'
 require 'csv'
 
-access_token = 'a36504c8b5e0ef7172c313961a2359bf06bb8485a0253beeb6fa389cc781d468'
-organization_id = '3CxfkkabuKH7LHYbGVFJ8r'
+access_token = 'd508948e2545cde4caa461fa4ba9a26b43ce560bbda265a605b0ce0a5c9a5839'
+organization_id = '1EQPR5IHrPx94UY4AViTYO'
 
-client = Contentful::Management::Client.new(access_token)
+Contentful::Management::Client.new(access_token)
 
 # create a Space
 space = Contentful::Management::Space.create(name: 'Breweries and Beers', organization_id: organization_id)
-
-# create locales to Space
-space.locales.create(name: 'English', code: 'en-US')
-space.locales.create(name: 'German', code: 'de-DE')
-space.locales.create(name: 'Polish', code: 'pl-PL')
 
 # create Brewery ContentType
 brewery_type = space.content_types.create(name: 'Brewery', description: 'Brewery description')
@@ -32,7 +27,7 @@ brewery_type.fields.create(id: 'brewery_beers', name: 'Brewery Beer', type: 'Arr
 beer_type = space.content_types.create(name: 'Beer')
 beer_type.fields.create(id: 'beer_name', name: 'Beer Name', type: 'Text', localized: true)
 beer_type.fields.create(id: 'beer_description', name: 'Beer Description', type: 'Text', localized: true)
-beer_type.fields.create(id: 'beer_abv', name: 'Alcohol by Volume', type: 'Number', localized: true)
+beer_type.fields.create(id: 'beer_abv', name: 'Alcohol by Volume', type: 'Text', localized: true)
 beer_type.fields.create(id: 'beer_brewery_id', name: 'Beer Brewery', type: 'Link', link_type: 'Entry', localized: false, required: true)
 beer_type.fields.create(id: 'beer_cat_id', name: 'Beer Category', type: 'Link', link_type: 'Entry', localized: true)
 beer_type.fields.create(id: 'beer_style_id', name: 'Beer Style', type: 'Link', link_type: 'Entry', localized: true)
@@ -46,6 +41,8 @@ style_type = space.content_types.create(name: 'Style')
 style_type.fields.create(id: 'style_name', name: 'Style Name', type: 'Text', localized: true)
 style_type.fields.create(id: 'style_category_id', name: 'Style category ', type: 'Link', link_type: 'Entry', localized: true)
 
+sleep 2
+
 #activate all content types
 brewery_type.activate
 beer_type.activate
@@ -55,52 +52,46 @@ style_type.activate
 sleep 2
 
 #create an entries for Category ContentType
-category_entries = []
+category_entries = {}
 CSV.foreach('data/categories.csv', :headers => true) do |row|
-  category_entries << category_type.entries.create({id: "category_#{row[0]}", category_name: row[1]})
-  category_entries
+  category_entries[row[0]] = category_type.entries.create({id: "category_#{row[0]}", category_name: row[1]})
 end
 
 #publish all Category entries
-category_entries.map(&:publish)
+category_entries.map { |_k, v| v.publish }
 
 sleep 2
 
-style_entries = []
+style_entries = {}
 CSV.foreach('data/styles.csv', :headers => true) do |row|
-  category_entries.each do |category_entry|
-    style_entries << style_type.entries.create(id: "style_#{row[0]}", style_category_id: category_entry, style_name: row[2]) if category_entry.id == "category_#{row[0]}"
+  category_entries.each do |_k, category_entry|
+    style_entries[row[0]]  = style_type.entries.create(id: "style_#{row[0]}", style_category_id: category_entry, style_name: row[2]) if category_entry.id == "category_#{row[0]}"  #limit styles to 11.
   end
 end
-style_entries.map(&:publish)
 
+#publish all Style entries
+style_entries.map { |_k, v| v.publish }
 
-breweries_ids = %w(1 2 3 4 5 100 102 103 500 501 502 1000 1001)
+breweries_ids = %w(1 10 62 103 500 901 1302 1009 1101 1260)
 breweries_by_id = {}
 
-CSV.foreach('data/breweries.csv',:headers => true) do |row|
-  brewery = brewery_type.entries.create(id: "brewery_#{row[0]}",brewery_name: row[1], brewery_description: row[11], brewery_phone: row[8], brewery_city: row[4], brewery_code: row[6], brewery_website: row[9]) if breweries_ids.include?row[0]
-  breweries_by_id[row[0]] = brewery
+CSV.foreach('data/breweries.csv', :headers => true) do |row|
+  brewery = brewery_type.entries.create(id: "brewery_#{row[0]}", brewery_name: row[1], brewery_description: row[11], brewery_phone: row[8], brewery_city: row[4], brewery_code: row[6], brewery_website: row[9]) if breweries_ids.include? row[0]
+  breweries_by_id[row[0]] = brewery unless brewery.nil?
 end
+sleep 2
+breweries_by_id.map { |_k, v| v.publish }
 
+#TODO add geolocation from csv to breweries
 
-#
-# #add geolocation from csv to breweries
-#
-# CSV.foreach('data/beers.csv') do |row|
-#   # create beer  only if valid brewery
-#   # beer assign breweries_by_id[row.brewery_id]
-#   # beer assign category
-#   # beer assign style
-# end
-#
-#
-#
-# # activate content types
-# beer_type.activate
-# brewery_type.activate
-#
-# sleep 2
+beers_entries = {}
+CSV.foreach('data/beers.csv', :headers => true) do |row|
+  breweries_by_id.each do |brewery_id, brewery|
+    beers_entries[row[0]] = beer_type.entries.create(beer_name: row[2], beer_description: row[10], beer_abv: row[5], beer_brewery_id: brewery, beer_cat_id: category_entries[row[3]], beer_style_id: style_entries[row[4]]) if brewery_id == row[1]
+  end
+end
+beers_entries.map { |_k, v| v.publish }
+
 #
 # # create an asset for Brewery with multiple locales
 # brewing_512_asset = space.assets.new
@@ -140,13 +131,6 @@ end
 # beer1_512_asset = space.assets.create(title: beer1_512['name'], description: 'First photo of ALT beer', file: beer1_photo_512)
 # beer1_512_asset2 = space.assets.create(title: beer1_512['name'], description: 'Second photo of ALT beer', file: beer1_photo2_512)
 #
-# #publishing an assets
-# # space.assets.find(beer1_512_asset.id).publish
-# # space.assets.find(beer1_512_asset2.id).publish
-# beer1_512_asset.publish
-# beer1_512_asset2.publish
-#
-# sleep 2
 #
 # #create an entry for Brewery for multiple locales
 # brewing_512 = Bartender::Brewery.find(1)
