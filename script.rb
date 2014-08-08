@@ -5,8 +5,8 @@
 require 'contentful/management'
 require 'csv'
 
-ACCESS_TOKEN = 'd508948e2545cde4caa461fa4ba9a26b43ce560bbda265a605b0ce0a5c9a5839'
-ORGANIZATION_ID = '1EQPR5IHrPx94UY4AViTYO'
+ACCESS_TOKEN = 'access_token'
+ORGANIZATION_ID = 'organization_id'
 STYLE_IDS = %w(1 2 3 4 5 6 11 22 24 25 27 49 90 110 112)
 BREWERIES_IDS = %w(1 10 62 103 500 901 1302 1009 1101 1260)
 
