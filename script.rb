@@ -121,5 +121,14 @@ end
 puts 'unpublish & destroy all Beer entries where ABV is lower then 1'
 beers_entries.each do |_id, beer|
   beer.unpublish if beer.abv < 1
-  beer.destroy
+end
+
+puts 'unpublish all Beer entries where ABV is lower then 1'
+beers_entries.each do |_id, beer|
+  beer.unpublish if beer.abv < 1
+end
+
+puts 'destroy all Beer entries where ABV is lower then 1'
+beers_entries.each do |_id, beer|
+  beer.destroy if beer.abv < 1
 end
