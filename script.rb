@@ -118,7 +118,7 @@ breweries_entries.each do |key, brewery_entry|
   brewery_entry.update(beers: brewery_beers)
 end
 
-puts 'unpublish & destroy all Beer entries where ABV is lower then 1'
+puts 'unpublish all Beer entries where ABV is lower then 1'
 beers_entries.each do |_id, beer|
   beer.unpublish if beer.abv < 1
 end
